@@ -1,0 +1,6 @@
+﻿__pycache__/
+*.pyc
+ornek_musteri_verisi.xlsx
+rapor.json
+cikti/
+.env

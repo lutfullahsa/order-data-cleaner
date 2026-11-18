@@ -1,4 +1,4 @@
-﻿# Order Data Cleaner / Sipariş Verisi Temizleme Aracı
+﻿# Order Data Cleaner / Sipariş Verisi Temizleme Aracı (v2.0)
 
 [English](#english) | [Türkçe](#türkçe)
 
@@ -6,40 +6,39 @@
 
 ## English
 
-### Overview & Problem Solved
-This modular Python tool automates the cleaning, validation, and reporting of messy customer and order datasets (Excel `.xlsx`, `.csv`, and `.json`). It eliminates hours of manual spreadsheet cleanup for e-commerce and business operations.
+### Overview (v2.0)
+The Order Data Cleaner is a robust, modular Python tool for cleaning, validating, and reporting customer and order datasets. **v2.0** introduces a professional Object-Oriented Architecture (`VeriTemizleyici`), advanced data normalization, and native Excel processing.
 
-### Key Features
-- **Multi-Format Support:** Reads `.xlsx`, `.csv`, and `.json` files seamlessly.
-- **Currency & Text Normalization:** Converts messy currency formats (e.g., `"1.250,50 TL"`) into clean floating-point numbers.
-- **Error Isolation:** Captures invalid emails, missing names, and negative prices without crashing, exporting them with clear rejection reasons.
-- **Duplicate Removal:** Detects and filters out exact duplicate order records.
-- **Excel-Ready Exports:** Generates clean and error reports in `.xlsx` and `utf-8-sig` `.csv` formats.
+### What's New in v2.0
+- **OOP Architecture:** Refactored into a clean `VeriTemizleyici` class for better scalability.
+- **Advanced Normalization:** Intelligent cleaning of phone numbers (+90 format) and multi-format date parsing (e.g., `DD.MM.YYYY`, `YYYY-MM-DD`).
+- **Excel Processing:** Shifted to `openpyxl` for high-performance, dependency-free Excel handling.
+- **Enhanced Logging:** Integrated `logging` module with real-time stream and file outputs.
+- **Detailed Error Reporting:** Now tracks duplicate entries with explicit rejection reasons.
 
-### Installation & Usage
+### Usage
 ```bash
-pip install -r requirements.txt
-python main.py
-python main.py --giris musteriler.xlsx
+python -m pip install openpyxl
+python main.py --giris data.xlsx
 ```
 
 ---
 
 ## Türkçe
 
-### Proje Amacı ve Çözdüğü İş Problemi
-Bu modüler Python aracı; dağınık ve hatalı müşteri/sipariş tablolarını (Excel `.xlsx`, `.csv` ve `.json`) saniyeler içinde temizler, doğrular ve raporlar. Manuel Excel düzenleme iş yükünü ortadan kaldırır.
+### Proje Amacı (v2.0)
+Dağınık ve hatalı müşteri/sipariş tablolarını (`.xlsx`, `.csv`, `.json`) temizleyen, doğrulayan ve raporlayan modüler bir Python aracıdır. **v2.0** sürümüyle birlikte OOP mimarisine geçilmiş, veri normalizasyonu güçlendirilmiş ve Excel bağımlılığı (`pandas` kaldırıldı) tamamen optimize edilmiştir.
 
-### Temel Özellikler
-- **Çoklu Format Desteği:** `.xlsx`, `.csv` ve `.json` dosyalarını doğrudan okur.
-- **Para Birimi ve Metin Düzenleme:** `"1.250,50 TL"` gibi metin formatındaki tutarları matematiksel sayılara çevirir.
-- **Hata İzolasyonu:** Eksik isimleri, hatalı e-postaları ve negatif fiyatlar gibi geçersiz verileri programı çökertmeden yakalar ve eleme nedenleriyle ayrı raporlar.
-- **Tekrar Kayıt Tespiti:** Birebir aynı olan mükerrer siparişleri otomatik ayıklar.
-- **Türkçe Karakter Uyumlu Çıktı:** Sonuçları Microsoft Excel ile tam uyumlu (`utf-8-sig`) `.csv` ve `.xlsx` formatlarında dışa aktarır.
+### v2.0 ile Gelen Yenilikler
+- **OOP Mimari:** `VeriTemizleyici` sınıf yapısı ile daha modüler ve sürdürülebilir kod.
+- **Gelişmiş Normalizasyon:** Telefon numaraları için `+90` standardizasyonu ve esnek tarih (DD.MM.YYYY, YYYY-MM-DD vb.) işleme.
+- **Saf Excel Desteği:** `pandas` kaldırıldı, `openpyxl` ile hafif ve performanslı Excel işlemleri sağlandı.
+- **Loglama:** İşlem adımlarının, hataların ve rapor özetlerinin `logging` modülü ile takibi.
+- **Hata Raporlama:** Tekrar eden kayıtlar artık "Tekrar eden kayıt" sebebiyle hatalı kayıtlar listesine aktarılıyor.
 
 ### Kurulum ve Kullanım
 ```bash
-pip install -r requirements.txt
-python main.py
-python main.py --giris musteriler.xlsx
+python -m pip install openpyxl
+python main.py --giris data.xlsx
 ```
+

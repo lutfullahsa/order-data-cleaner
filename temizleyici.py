@@ -1,153 +1,143 @@
-"""Sipariş kayıtlarını standart Python ile temizleyen bağımsız fonksiyonlar."""
-
+from datetime import datetime
+import logging
+from pathlib import Path
 import re
 
+class VeriTemizleyici:
+    """Sipariş kayıtlarını doğrular ve temizler."""
 
-def isim_duzenle(isim):
-    """İsim alanını kırpar, fazla boşlukları siler ve baş harfleri büyütür."""
-    try:
-        if isim is None:
-            raise ValueError("İsim eksik (None)")
-        duzenli = " ".join(str(isim).split())
-        if not duzenli:
-            raise ValueError("İsim boş")
-        return duzenli.title()
-    except ValueError:
-        raise
-    except Exception as hata:
-        raise ValueError(f"İsim işlenirken beklenmeyen hata: {hata}") from hata
+    def __init__(self, ham_kayitlar, log_dosyasi=None):
+        """Kayıtları ve temizleme günlükleyicisini başlatır."""
+        self.ham_kayitlar = ham_kayitlar if ham_kayitlar is not None else []
+        self.temiz_kayitlar = []
+        self.hatali_kayitlar = []
+        
+        self.logger = logging.getLogger("VeriTemizleyici")
+        self.logger.setLevel(logging.INFO)
+        
+        if not self.logger.handlers:
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            self.logger.addHandler(console_handler)
+            
+            if log_dosyasi:
+                log_path = Path(log_dosyasi)
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                file_handler = logging.FileHandler(log_dosyasi, encoding='utf-8')
+                file_handler.setFormatter(formatter)
+                self.logger.addHandler(file_handler)
 
+    def isim_duzenle(self, isim):
+        """İsim metnini boşluklardan arındırıp baş harflerini büyütür."""
+        if not isim: raise ValueError("İsim eksik")
+        return " ".join(str(isim).split()).title()
 
-def eposta_dogrula(eposta):
-    """E-posta metnini kırpar ve '@' işareti ile temel biçimi doğrular."""
-    try:
-        if eposta is None:
-            raise ValueError("E-posta eksik (None)")
-        temiz = str(eposta).strip()
-        if not temiz:
-            raise ValueError("E-posta boş")
-        if "@" not in temiz:
-            raise ValueError("E-posta '@' işareti içermiyor")
-        # Basit biçim: yerel-kısım@alan
-        if not re.match(r"^[^@\s]+@[^@\s]+$", temiz):
-            raise ValueError("E-posta biçimi geçersiz")
-        alan_adi = temiz.rsplit("@", 1)[1]
-        if "." not in alan_adi:
-            raise ValueError("Alan adı en az bir nokta içermelidir")
-        return temiz.lower()
-    except ValueError:
-        raise
-    except Exception as hata:
-        raise ValueError(f"E-posta doğrulanırken beklenmeyen hata: {hata}") from hata
+    def eposta_dogrula(self, eposta):
+        """E-posta adresini temel biçimde doğrular ve küçük harfe çevirir."""
+        if not eposta or "@" not in str(eposta): raise ValueError("Geçersiz e-posta")
+        return str(eposta).strip().lower()
 
-
-def fiyat_temizle(fiyat):
-    """Metin veya sayısal fiyatı pozitif float değere çevirir (TR biçimini destekler)."""
-    try:
-        if fiyat is None:
-            raise ValueError("Fiyat eksik (None)")
-
-        if isinstance(fiyat, bool):
-            raise ValueError("Fiyat boolean olamaz")
-
-        if isinstance(fiyat, (int, float)):
-            deger = float(fiyat)
+    def fiyat_temizle(self, fiyat):
+        """Fiyatı ondalık sayıya çevirir ve negatif değerleri reddeder."""
+        if isinstance(fiyat, str):
+            if "-" in fiyat:
+                raise ValueError("Negatif fiyat olamaz")
         else:
-            metin = str(fiyat).strip().lower()
-            metin = re.sub(r"\s+", "", metin)
-            metin = metin.replace("₺", "").replace("tl", "")
-            if not metin:
-                raise ValueError("Fiyat metni boş")
-
-            # TR biçimi: 1.250,50 -> 1250.50 | 2.000 -> 2000 | 99,99 -> 99.99
-            if "," in metin:
-                metin = metin.replace(".", "").replace(",", ".")
-            elif "." in metin:
-                parcalar = metin.split(".")
-                # 2.000 veya 1.250.000 gibi binlik grupları
-                if len(parcalar) > 1 and all(len(p) == 3 for p in parcalar[1:]):
-                    metin = "".join(parcalar)
-
             try:
-                deger = float(metin)
-            except ValueError:
-                raise ValueError(f"Fiyat sayıya çevrilemedi: '{fiyat}'") from None
+                if fiyat < 0:
+                    raise ValueError("Negatif fiyat olamaz")
+            except TypeError:
+                pass
 
-        if deger < 0:
-            raise ValueError("Fiyat negatif olamaz")
-        return round(deger, 2)
-    except ValueError:
-        raise
-    except Exception as hata:
-        raise ValueError(f"Fiyat dönüştürülemedi: {hata}") from hata
+        fiyat_str = re.sub(r'[^\d,.]', '', str(fiyat))
+        if ',' in fiyat_str and '.' in fiyat_str:
+            if fiyat_str.find(',') > fiyat_str.find('.'): fiyat_str = fiyat_str.replace('.', '').replace(',', '.')
+            else: fiyat_str = fiyat_str.replace(',', '')
+        elif ',' in fiyat_str:
+            fiyat_str = fiyat_str.replace(',', '.')
+        elif re.fullmatch(r'\d{1,3}(?:\.\d{3})+', fiyat_str):
+            fiyat_str = fiyat_str.replace('.', '')
 
+        try:
+            val = float(fiyat_str)
+        except (TypeError, ValueError) as hata:
+            raise ValueError("Geçersiz fiyat") from hata
+        if val < 0:
+            raise ValueError("Negatif fiyat olamaz")
+        return val
 
-def tekrarlari_kaldir(kayitlar):
-    """Aynı isim, e-posta, ürün ve fiyata sahip sonraki kayıtları ayıklar."""
-    benzersiz = []
-    hatali = []
-    gorulen = set()
+    def telefon_temizle(self, telefon):
+        """Telefon numarasını Türkiye biçiminde standartlaştırır."""
+        temiz = re.sub(r'\D', '', str(telefon))
+        if len(temiz) == 10: temiz = "90" + temiz
+        elif len(temiz) == 11 and temiz.startswith('0'): temiz = "90" + temiz[1:]
+        elif len(temiz) == 12 and temiz.startswith('90'): pass
+        else: raise ValueError("Geçersiz telefon")
+        return f"+{temiz[:2]} {temiz[2:5]} {temiz[5:8]} {temiz[8:10]} {temiz[10:12]}"
 
-    try:
-        for kayit in kayitlar:
+    def tarih_temizle(self, tarih):
+        """Desteklenen tarih biçimlerini YYYY-AA-GG biçimine dönüştürür."""
+        if isinstance(tarih, datetime):
+            return tarih.strftime("%Y-%m-%d")
+        tarih = str(tarih).strip()
+        for fmt in ("%d.%m.%Y", "%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+            try: return datetime.strptime(tarih, fmt).strftime("%Y-%m-%d")
+            except: continue
+        raise ValueError("Geçersiz tarih formatı")
+
+    def tekrarlari_kaldir(self, veriler):
+        """Aynı siparişe ait yinelenen kayıtları hatalı listesine ayırır."""
+        yeni, hatali = [], []
+        gorulen = set()
+        for v in veriler:
+            kimlik = (
+                v.get("isim"),
+                v.get("eposta"),
+                v.get("urun"),
+                v.get("fiyat"),
+                v.get("telefon"),
+                v.get("tarih"),
+            )
+            if kimlik not in gorulen:
+                yeni.append(v)
+                gorulen.add(kimlik)
+            else:
+                v["hata_sebebi"] = "Tekrar eden kayıt"
+                hatali.append(v)
+        return yeni, hatali
+
+    def verileri_temizle(self):
+        """Ham kayıtları temizleyip geçerli ve hatalı listeleri döndürür."""
+        self.logger.info("Veri temizleme işlemi başladı.")
+        gecici_temiz, self.hatali_kayitlar = [], []
+        for i, kayit in enumerate(self.ham_kayitlar, 1):
             try:
-                anahtar = (
-                    kayit.get("isim"),
-                    kayit.get("eposta"),
-                    kayit.get("urun"),
-                    kayit.get("fiyat"),
-                )
-                if anahtar in gorulen:
-                    hatali.append({
-                        **kayit,
-                        "hata_sebebi": "Tamamen aynı olan tekrar eden kayıt",
-                    })
-                    continue
-                gorulen.add(anahtar)
-                benzersiz.append(kayit)
-            except Exception as hata:
-                hatali.append({
-                    **kayit,
-                    "hata_sebebi": f"Tekrar kontrolü başarısız: {hata}",
-                })
-    except Exception as hata:
-        # Liste taraması beklenmedik şekilde bozulursa mevcut sonuçları koru.
-        hatali.append({
-            "satir_no": None,
-            "hata_sebebi": f"Tekrarları kaldırma işlemi yarım kaldı: {hata}",
-        })
+                temiz = {
+                    "satir_no": i,
+                    "isim": self.isim_duzenle(kayit.get("isim")),
+                    "eposta": self.eposta_dogrula(kayit.get("eposta")),
+                    "fiyat": self.fiyat_temizle(kayit.get("fiyat")),
+                    "urun": str(kayit.get("urun", "")).strip()
+                }
+                if kayit.get("telefon"): temiz["telefon"] = self.telefon_temizle(kayit["telefon"])
+                if kayit.get("tarih"): temiz["tarih"] = self.tarih_temizle(kayit["tarih"])
+                gecici_temiz.append(temiz)
+            except Exception as e:
+                self.logger.warning(f"Satır {i} hatalı: {e}")
+                h = dict(kayit)
+                h["satir_no"] = i
+                h["hata_sebebi"] = str(e)
+                self.hatali_kayitlar.append(h)
+        self.temiz_kayitlar, tekrarlar = self.tekrarlari_kaldir(gecici_temiz)
+        self.hatali_kayitlar.extend(tekrarlar)
+        self.logger.info("Veri temizleme işlemi tamamlandı.")
+        return self.temiz_kayitlar, self.hatali_kayitlar
 
-    return benzersiz, hatali
-
+    def ozet_rapor_al(self):
+        """Toplam, geçerli ve hatalı kayıt sayılarını döndürür."""
+        return {"toplam": len(self.ham_kayitlar), "gecerli": len(self.temiz_kayitlar), "hatali": len(self.hatali_kayitlar)}
 
 def verileri_isle(ham_siparisler):
-    """Tüm ham listeyi tarar; geçerli ve hatalı kayıtları ayırır."""
-    gecici_temiz = []
-    hatali_kayitlar = []
-
-    for satir_no, kayit in enumerate(ham_siparisler, start=1):
-        try:
-            isim = isim_duzenle(kayit.get("isim") if isinstance(kayit, dict) else None)
-            eposta = eposta_dogrula(kayit.get("eposta") if isinstance(kayit, dict) else None)
-            fiyat = fiyat_temizle(kayit.get("fiyat") if isinstance(kayit, dict) else None)
-            urun = ""
-            if isinstance(kayit, dict) and kayit.get("urun"):
-                urun = str(kayit.get("urun")).strip()
-
-            gecici_temiz.append({
-                "satir_no": satir_no,
-                "isim": isim,
-                "eposta": eposta,
-                "urun": urun,
-                "fiyat": fiyat,
-            })
-        except Exception as hata:
-            hatali = dict(kayit) if isinstance(kayit, dict) else {"kayit": kayit}
-            hatali["satir_no"] = satir_no
-            hatali["hata_sebebi"] = str(hata)
-            hatali_kayitlar.append(hatali)
-
-    temiz_kayitlar, tekrar_hatalari = tekrarlari_kaldir(gecici_temiz)
-    hatali_kayitlar.extend(tekrar_hatalari)
-    hatali_kayitlar.sort(key=lambda k: k.get("satir_no") or 0)
-    return temiz_kayitlar, hatali_kayitlar
+    t = VeriTemizleyici(ham_siparisler)
+    return t.verileri_temizle()

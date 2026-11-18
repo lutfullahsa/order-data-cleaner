@@ -9,7 +9,7 @@ from dosya_islemleri import (
     ornek_bozuk_excel_olustur,
     sonuclari_disa_aktar,
 )
-from temizleyici import verileri_isle
+from temizleyici import VeriTemizleyici
 
 
 def tl_metni(tutar):
@@ -159,7 +159,8 @@ def main():
     """CLI'yi çalıştırır, veriyi işler, raporu basar ve CSV/Excel/JSON yazar."""
     args = argumanlari_ayir()
     ham_liste, kaynak = ham_veriyi_yukle(args.giris)
-    temiz_kayitlar, hatali_kayitlar = verileri_isle(ham_liste)
+    temizleyici = VeriTemizleyici(ham_liste, log_dosyasi=Path(args.cikis) / "islem_gecmisi.log")
+    temiz_kayitlar, hatali_kayitlar = temizleyici.verileri_temizle()
     ciro = raporu_yazdir(ham_liste, temiz_kayitlar, hatali_kayitlar, kaynak)
 
     try:

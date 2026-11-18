@@ -10,6 +10,8 @@ from dosya_islemleri import (
     sonuclari_disa_aktar,
 )
 from temizleyici import VeriTemizleyici
+from veritabani import VeritabaniYoneticisi
+
 
 
 def tl_metni(tutar):
@@ -161,6 +163,11 @@ def main():
     ham_liste, kaynak = ham_veriyi_yukle(args.giris)
     temizleyici = VeriTemizleyici(ham_liste, log_dosyasi=Path(args.cikis) / "islem_gecmisi.log")
     temiz_kayitlar, hatali_kayitlar = temizleyici.verileri_temizle()
+
+    # SQLite'a kaydet ve bağlantıyı güvenli şekilde kapat
+    with VeritabaniYoneticisi(Path(args.cikis) / "siparisler.db") as db:
+        db.kayitlari_ekle(kaynak, temiz_kayitlar, hatali_kayitlar)
+
     ciro = raporu_yazdir(ham_liste, temiz_kayitlar, hatali_kayitlar, kaynak)
 
     try:
@@ -182,6 +189,7 @@ def main():
     print(f"{'Hatalı CSV':<28} {str(dosyalar['hatali_csv'].name):>22}")
     print(f"{'Hatalı Excel':<28} {str(dosyalar['hatali_xlsx'].name):>22}")
     print(f"{'JSON çıktı':<28} {json_yol.name:>22}")
+    print(f"{'SQLite DB':<28} {'siparisler.db':>22}")
 
 
 if __name__ == "__main__":

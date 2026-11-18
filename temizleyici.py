@@ -70,6 +70,7 @@ class VeriTemizleyici:
     def telefon_temizle(self, telefon):
         """Telefon numarasını Türkiye biçiminde standartlaştırır."""
         temiz = re.sub(r'\D', '', str(telefon))
+        if len(temiz) == 14 and temiz.startswith('0090'): temiz = temiz[2:]
         if len(temiz) == 10: temiz = "90" + temiz
         elif len(temiz) == 11 and temiz.startswith('0'): temiz = "90" + temiz[1:]
         elif len(temiz) == 12 and temiz.startswith('90'): pass
